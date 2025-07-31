@@ -11,6 +11,7 @@ import 'package:hotel_booking/theme/color.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart'; // Import the new package
 
 class ProfilePage extends StatefulWidget {
   final String email;
@@ -78,7 +79,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 70,
+      imageQuality: 70, // Initial quality, further compression applied below
     );
 
     if (pickedFile != null) {
@@ -86,6 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (kIsWeb) {
           _pickedWebImage = pickedFile;
           _profileImageFile = null;
+          // For web, pickedFile.path is a blob URL, which can be directly used for display
           _profileImageUrl = pickedFile.path;
         } else {
           _profileImageFile = File(pickedFile.path);
@@ -116,16 +118,43 @@ class _ProfilePageState extends State<ProfilePage> {
         "phone": _phoneController.text.trim(),
       };
 
-      if (!kIsWeb && _profileImageFile != null) {
-        final bytes = await _profileImageFile!.readAsBytes();
-        requestBody["profileImage"] =
-            "data:image/jpeg;base64,${base64Encode(bytes)}";
-      } else if (kIsWeb && _pickedWebImage != null) {
+      // Handle image compression and encoding
+      if (_profileImageFile != null && !kIsWeb) {
+        // Compress image for mobile/desktop
+        final compressedBytes = await FlutterImageCompress.compressWithFile(
+          _profileImageFile!.path,
+          minWidth: 800, // Reduce width to 800 pixels
+          minHeight: 600, // Reduce height to 600 pixels
+          quality: 70, // Adjust quality (0-100) as needed for smaller file size
+          format: CompressFormat.jpeg,
+        );
+        if (compressedBytes != null) {
+          requestBody["profileImage"] =
+              "data:image/jpeg;base64,${base64Encode(compressedBytes)}";
+        } else {
+          debugPrint("កំហុសក្នុងការបង្រួមរូបភាពសម្រាប់ទូរស័ព្ទ/កុំព្យូទ័រ។");
+          _showSnackBar("កំហុសក្នុងការបង្រួមរូបភាព។", isError: true);
+        }
+      } else if (_pickedWebImage != null && kIsWeb) {
+        // For web, we read bytes directly from XFile and compress in memory
         final bytes = await _pickedWebImage!.readAsBytes();
-        requestBody["profileImage"] =
-            "data:image/jpeg;base64,${base64Encode(bytes)}";
+        final compressedBytes = await FlutterImageCompress.compressWithList(
+          bytes,
+          minWidth: 800, // Reduce width to 800 pixels
+          minHeight: 600, // Reduce height to 600 pixels
+          quality: 70, // Adjust quality (0-100) as needed for smaller file size
+          format: CompressFormat.jpeg,
+        );
+        if (compressedBytes != null) {
+          requestBody["profileImage"] =
+              "data:image/jpeg;base64,${base64Encode(compressedBytes)}";
+        } else {
+          debugPrint("កំហុសក្នុងការបង្រួមរូបភាពសម្រាប់គេហទំព័រ។");
+          _showSnackBar("កំហុសក្នុងការបង្រួមរូបភាព។", isError: true);
+        }
       } else if (_profileImageUrl != null &&
           _profileImageUrl!.startsWith('http')) {
+        // If no new image picked and existing is a URL, keep it
         requestBody["profileImage"] = _profileImageUrl;
       }
 
@@ -493,8 +522,10 @@ class _ProfilePageState extends State<ProfilePage> {
         displayImageUrl != null &&
         (displayImageUrl.startsWith('blob:') ||
             displayImageUrl.startsWith('data:'))) {
+      // For web, if it's a blob or data URL from picked file, use NetworkImage
       imageProvider = NetworkImage(displayImageUrl);
     } else if (displayImageUrl != null && displayImageUrl.isNotEmpty) {
+      // For external network images
       imageProvider = CachedNetworkImageProvider(displayImageUrl);
     }
 
