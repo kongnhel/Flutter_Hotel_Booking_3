@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hotel_booking/screens/sidebar_screen/orders_screen.dart';
+import 'package:hotel_booking/screens/admin/admin_order_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/room/room_list.dart';
 import 'package:hotel_booking/screens/sidebar_screen/user_management.dart';
 import 'package:hotel_booking/theme/color.dart'; // Ensure this path is correct
@@ -39,7 +39,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 context,
                 // Using a placeholder asset path. Replace 'assets/icons/hotel_icon.png' with your actual asset path.
                 // Make sure to add the asset path to your pubspec.yaml file under the 'assets:' section.
-                assetPath: 'assets/images/hotel.png',
+                icon: Icons.hotel, // Using an icon for Rooms
+                // assetPath: 'assets/images/hotel.png',
                 title: 'ការគ្រប់គ្រងបន្ទប់', // Room Management
                 onTap: () {
                   Navigator.push(
@@ -52,7 +53,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
               _buildDashboardCard(
                 context,
-                assetPath: 'assets/images/user.png',
+                icon: Icons.supervised_user_circle,
+                // assetPath: 'assets/images/user.png',
                 title: 'ការគ្រប់គ្រងអ្នកប្រើប្រាស់', // User Management
                 onTap: () {
                   Navigator.push(
@@ -65,13 +67,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
               _buildDashboardCard(
                 context,
-                assetPath: 'assets/images/order.png',
+                icon: Icons.book_online, // Using an icon for Orders
+                // assetPath: 'assets/images/order.png',
                 title: 'ការគ្រប់គ្រងការកក់', // Booking Management
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const OrdersScreen(),
+                      builder: (context) => const AdminOrdersScreen(),
                     ),
                   );
                 },
