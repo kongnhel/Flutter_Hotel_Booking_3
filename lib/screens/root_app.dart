@@ -304,7 +304,7 @@ class _RootAppState extends State<RootApp> {
                     //   icon: Icons.add,
                     // ),
                     AdminMenuItem(
-                      title: 'បន្ថែមបន្ទប់​ & មើលបន្ទប់',
+                      title: 'បន្ថែមបន្ទប់​ & បន្ទប់ទាំងអស់',
                       route: RoomListScreen.id,
                       icon: Icons.view_list_outlined,
                     ),
