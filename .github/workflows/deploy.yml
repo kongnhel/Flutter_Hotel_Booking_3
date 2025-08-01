@@ -1,4 +1,9 @@
 name: Deploy Flutter Web to GitHub Pages
+name: Deploy Flutter Web to GitHub Pages
+
+permissions:
+  contents: write
+
 
 on:
   push:
