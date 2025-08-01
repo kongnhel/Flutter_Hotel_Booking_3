@@ -16,7 +16,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.6" # ប្តូរតាម Version Flutter របស់អ្នក
+          flutter-version: "3.32.6" # ប្តូរតាម Version Flutter របស់អ្នក
 
       - name: Install dependencies
         run: flutter pub get
