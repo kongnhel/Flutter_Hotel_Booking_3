@@ -393,6 +393,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+
   Future<void> _showChangePasswordDialog() async {
     final TextEditingController _currentPasswordController =
         TextEditingController();
