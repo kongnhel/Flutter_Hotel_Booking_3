@@ -6,7 +6,7 @@ permissions:
 on:
   push:
     branches:
-      - main # ប្តូរទៅ branch ដែលអ្នកប្រើសម្រាប់ Source Code
+      - main
 
 jobs:
   build:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "stable"
+          flutter-version: "3.32.6" # ប្តូរទៅ version ដែលអ្នកមានក្នុង local
 
       - name: Install dependencies
         run: flutter pub get
@@ -34,4 +34,3 @@ jobs:
           publish_dir: ./build/web
           publish_branch: gh-pages
           force_orphan: true
-          commit_message: "Deploy Flutter Web to GitHub Pages 🚀"
