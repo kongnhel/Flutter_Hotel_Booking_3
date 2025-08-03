@@ -19,7 +19,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.6" # ប្តូរទៅ version ដែលអ្នកមានក្នុង local
+          flutter-version: "3.32.6" 
 
       - name: Install dependencies
         run: flutter pub get

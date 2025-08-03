@@ -4,6 +4,36 @@ import 'package:http/http.dart' as http;
 import 'package:hotel_booking/screens/root_app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Import the new widgets
+import 'package:hotel_booking/widgets/date_selection_row.dart';
+import 'package:hotel_booking/widgets/custom_checkout_textfield.dart';
+
+// Helper widget for summary rows
+class BookingSummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const BookingSummaryRow({Key? key, required this.label, required this.value})
+    : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class CheckoutPage extends StatefulWidget {
   final Map<String, dynamic> roomData;
   final String roomTypeName;
@@ -41,6 +71,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _loadUserEmail();
   }
 
+  @override
+  void dispose() {
+    _guestsController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -52,12 +88,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         isError: true,
       );
     }
-  }
-
-  @override
-  void dispose() {
-    _guestsController.dispose();
-    super.dispose();
   }
 
   Future<void> _selectDate(BuildContext context, bool isCheckIn) async {
@@ -74,7 +104,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: const ColorScheme.light(
               primary: Colors.deepPurple, // Header background color
               onPrimary: Colors.white, // Header text color
               onSurface: Colors.black, // Body text color
@@ -156,7 +186,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://flutter-hotel-booking-api-2.onrender.com/api/orders"),
+        Uri.parse(
+          "https://flutter-hotel-booking-api-2.onrender.com/api/orders",
+        ),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "roomId": widget.roomData["id"],
@@ -288,28 +320,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const Divider(height: 25, thickness: 1),
-          _summaryRow("បន្ទប់:", widget.roomData['name'] ?? 'N/A'), // Room:
-          _summaryRow("ប្រភេទ:", widget.roomTypeName), // Type:
-          _summaryRow(
-            "តម្លៃ:",
-            "${_getPriceAsDouble().toStringAsFixed(2)}\$",
+          BookingSummaryRow(
+            label: "បន្ទប់:",
+            value: widget.roomData['name'] ?? 'N/A',
+          ), // Room:
+          BookingSummaryRow(
+            label: "ប្រភេទ:",
+            value: widget.roomTypeName,
+          ), // Type:
+          BookingSummaryRow(
+            label: "តម្លៃ:",
+            value: "${_getPriceAsDouble().toStringAsFixed(2)}\$",
           ), // Price:
         ],
       ),
-    ),
-  );
-
-  Widget _summaryRow(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ],
     ),
   );
 
@@ -329,56 +353,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const Divider(height: 25, thickness: 1),
-          _buildDateRow(
-            "ថ្ងៃចូល:", // Check-in Date:
-            _checkInDate,
-            () => _selectDate(context, true),
+          DateSelectionRow(
+            label: "ថ្ងៃចូល:", // Check-in Date:
+            date: _checkInDate,
+            onTap: () => _selectDate(context, true),
           ),
           const SizedBox(height: 10),
-          _buildDateRow(
-            "ថ្ងៃចេញ:", // Check-out Date:
-            _checkOutDate,
-            () => _selectDate(context, false),
+          DateSelectionRow(
+            label: "ថ្ងៃចេញ:", // Check-out Date:
+            date: _checkOutDate,
+            onTap: () => _selectDate(context, false),
           ),
         ],
       ),
     ),
   );
-
-  Widget _buildDateRow(String label, DateTime date, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-            Row(
-              children: [
-                Text(
-                  "${date.day}/${date.month}/${date.year}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.calendar_today,
-                  color: Colors.deepPurple,
-                  size: 20,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildGuestsInput(TextTheme textTheme) => Card(
     elevation: 6,
@@ -396,10 +385,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const Divider(height: 25, thickness: 1),
-          _textField(
-            _guestsController,
-            "ចំនួនភ្ញៀវ", // Number of Guests
-            Icons.people,
+          CustomCheckoutTextField(
+            controller: _guestsController,
+            label: "ចំនួនភ្ញៀវ", // Number of Guests
+            icon: Icons.people,
             keyboardType: TextInputType.number,
           ),
         ],
@@ -444,31 +433,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ],
       ),
-    ),
-  );
-
-  Widget _textField(
-    TextEditingController controller,
-    String label,
-    IconData icon, {
-    TextInputType keyboardType = TextInputType.text,
-  }) => TextField(
-    controller: controller,
-    keyboardType: keyboardType,
-    decoration: InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.deepPurple),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.grey, width: 1.0),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.deepPurple, width: 2.0),
-      ),
-      filled: true,
-      fillColor: Colors.grey[50],
     ),
   );
 }

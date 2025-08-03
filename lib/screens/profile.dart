@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // Still needed for CachedNetworkImageProvider in ProfileAvatar
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -11,8 +11,14 @@ import 'package:hotel_booking/theme/color.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart'; // Import the new package
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
+// Import your new widgets
+import 'package:hotel_booking/widgets/profile_avatar.dart';
+import 'package:hotel_booking/widgets/custom_text_field.dart';
+import 'package:hotel_booking/widgets/setting_item.dart';
+
+// --- Profile Page ---
 class ProfilePage extends StatefulWidget {
   final String email;
 
@@ -269,52 +275,47 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _showChangeEmailDialog() async {
-    final TextEditingController _newEmailController = TextEditingController();
-    final TextEditingController _currentPasswordController =
+    final TextEditingController newEmailController = TextEditingController();
+    final TextEditingController currentPasswordController =
         TextEditingController();
-    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("ប្ដូរអ៊ីមែល"),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
-                controller: _newEmailController,
-                decoration: InputDecoration(
-                  labelText: "អ៊ីមែលថ្មី",
-                  hintText: "បញ្ចូលអ៊ីមែលថ្មីរបស់អ្នក",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+              CustomTextField(
+                // Using CustomTextField here
+                controller: newEmailController,
+                labelText: "អ៊ីមែលថ្មី",
+                hintText: "បញ្ចូលអ៊ីមែលថ្មីរបស់អ្នក",
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'សូមបញ្ចូលអ៊ីមែលថ្មី';
-                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value))
+                  }
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                     return 'បញ្ចូលអ៊ីមែលត្រឹមត្រូវ';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 15),
-              TextFormField(
-                controller: _currentPasswordController,
-                decoration: InputDecoration(
-                  labelText: "ពាក្យសម្ងាត់បច្ចុប្បន្ន",
-                  hintText: "បញ្ជាក់ជាមួយនឹងពាក្យសម្ងាត់បច្ចុប្បន្នរបស់អ្នក",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+              CustomTextField(
+                // Using CustomTextField here
+                controller: currentPasswordController,
+                labelText: "ពាក្យសម្ងាត់បច្ចុប្បន្ន",
+                hintText: "បញ្ជាក់ជាមួយនឹងពាក្យសម្ងាត់បច្ចុប្បន្នរបស់អ្នក",
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'សូមបញ្ចូលពាក្យសម្ងាត់បច្ចុប្បន្នរបស់អ្នក';
+                  }
                   return null;
                 },
               ),
@@ -328,20 +329,21 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 Navigator.of(context).pop();
                 setState(() => _isLoading = true);
                 try {
                   final user = FirebaseAuth.instance.currentUser;
-                  if (user == null)
+                  if (user == null) {
                     throw Exception("រកមិនឃើញអ្នកប្រើប្រាស់ដែលបានចូលទេ។");
+                  }
 
                   AuthCredential credential = EmailAuthProvider.credential(
                     email: user.email!,
-                    password: _currentPasswordController.text,
+                    password: currentPasswordController.text,
                   );
                   await user.reauthenticateWithCredential(credential);
-                  await user.updateEmail(_newEmailController.text.trim());
+                  await user.updateEmail(newEmailController.text.trim());
                   await user.sendEmailVerification();
 
                   final token = await user.getIdToken();
@@ -354,13 +356,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       "Authorization": "Bearer $token",
                     },
                     body: json.encode({
-                      "email": _newEmailController.text.trim(),
+                      "email": newEmailController.text.trim(),
                     }),
                   );
 
                   if (_currentUser != null) {
                     _currentUser = _currentUser!.copyWith(
-                      email: _newEmailController.text.trim(),
+                      email: newEmailController.text.trim(),
                     );
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setString(
@@ -393,72 +395,62 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-
   Future<void> _showChangePasswordDialog() async {
-    final TextEditingController _currentPasswordController =
+    final TextEditingController currentPasswordController =
         TextEditingController();
-    final TextEditingController _newPasswordController =
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmNewPasswordController =
         TextEditingController();
-    final TextEditingController _confirmNewPasswordController =
-        TextEditingController();
-    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("ប្ដូរពាក្យសម្ងាត់"),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
-                controller: _currentPasswordController,
-                decoration: InputDecoration(
-                  labelText: "ពាក្យសម្ងាត់បច្ចុប្បន្ន",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+              CustomTextField(
+                // Using CustomTextField here
+                controller: currentPasswordController,
+                labelText: "ពាក្យសម្ងាត់បច្ចុប្បន្ន",
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'សូមបញ្ចូលពាក្យសម្ងាត់បច្ចុប្បន្នរបស់អ្នក';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 15),
-              TextFormField(
-                controller: _newPasswordController,
-                decoration: InputDecoration(
-                  labelText: "ពាក្យសម្ងាត់ថ្មី",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  hintText: "អក្សរយ៉ាងតិច ៦ តួ",
-                ),
+              CustomTextField(
+                // Using CustomTextField here
+                controller: newPasswordController,
+                labelText: "ពាក្យសម្ងាត់ថ្មី",
+                hintText: "អក្សរយ៉ាងតិច ៦ តួ",
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty || value.length < 6)
+                  if (value == null || value.isEmpty || value.length < 6) {
                     return 'ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងតិច ៦ តួអក្សរ';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 15),
-              TextFormField(
-                controller: _confirmNewPasswordController,
-                decoration: InputDecoration(
-                  labelText: "បញ្ជាក់ពាក្យសម្ងាត់ថ្មី",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+              CustomTextField(
+                // Using CustomTextField here
+                controller: confirmNewPasswordController,
+                labelText: "បញ្ជាក់ពាក្យសម្ងាត់ថ្មី",
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'សូមបញ្ជាក់ពាក្យសម្ងាត់ថ្មីរបស់អ្នក';
-                  if (value != _newPasswordController.text)
+                  }
+                  if (value != newPasswordController.text) {
                     return 'ពាក្យសម្ងាត់មិនត្រូវគ្នាទេ';
+                  }
                   return null;
                 },
               ),
@@ -472,20 +464,21 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 Navigator.of(context).pop();
                 setState(() => _isLoading = true);
                 try {
                   final user = FirebaseAuth.instance.currentUser;
-                  if (user == null)
+                  if (user == null) {
                     throw Exception("រកមិនឃើញអ្នកប្រើប្រាស់ដែលបានចូលទេ។");
+                  }
 
                   AuthCredential credential = EmailAuthProvider.credential(
                     email: user.email!,
-                    password: _currentPasswordController.text,
+                    password: currentPasswordController.text,
                   );
                   await user.reauthenticateWithCredential(credential);
-                  await user.updatePassword(_newPasswordController.text);
+                  await user.updatePassword(newPasswordController.text);
                   _showSnackBar(
                     "ពាក្យសម្ងាត់ត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ!",
                   );
@@ -511,167 +504,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileAvatar() {
-    final displayImageFile = _profileImageFile;
-    final displayImageUrl = _profileImageUrl;
-
-    ImageProvider<Object>? imageProvider;
-
-    if (displayImageFile != null && !kIsWeb) {
-      imageProvider = FileImage(displayImageFile);
-    } else if (kIsWeb &&
-        displayImageUrl != null &&
-        (displayImageUrl.startsWith('blob:') ||
-            displayImageUrl.startsWith('data:'))) {
-      // For web, if it's a blob or data URL from picked file, use NetworkImage
-      imageProvider = NetworkImage(displayImageUrl);
-    } else if (displayImageUrl != null && displayImageUrl.isNotEmpty) {
-      // For external network images
-      imageProvider = CachedNetworkImageProvider(displayImageUrl);
-    }
-
-    String initials = "";
-    if (_firstNameController.text.isNotEmpty)
-      initials += _firstNameController.text[0].toUpperCase();
-    if (_lastNameController.text.isNotEmpty)
-      initials += _lastNameController.text[0].toUpperCase();
-    if (initials.isEmpty && _emailController.text.isNotEmpty)
-      initials = _emailController.text[0].toUpperCase();
-    if (initials.isEmpty) initials = "?";
-
-    return Center(
-      child: Stack(
-        alignment: Alignment.bottomRight,
-        children: [
-          imageProvider != null
-              ? CircleAvatar(
-                  radius: 60,
-                  backgroundColor: const Color.fromARGB(
-                    255,
-                    15,
-                    189,
-                    27,
-                  ).withOpacity(0.3),
-                  backgroundImage: imageProvider,
-                  onBackgroundImageError: (exception, stackTrace) {
-                    debugPrint('កំហុសក្នុងការផ្ទុករូបភាព: $exception');
-                    setState(() {
-                      _profileImageUrl = null;
-                      _profileImageFile = null;
-                      _pickedWebImage = null;
-                    });
-                  },
-                )
-              : CircleAvatar(
-                  radius: 60,
-                  backgroundColor: const Color.fromARGB(
-                    255,
-                    15,
-                    189,
-                    27,
-                  ).withOpacity(0.3),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 15, 189, 27),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColor.appBarColor,
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            "ប្រវត្តិរូប",
-            style: TextStyle(
-              color: AppColor.textColor,
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColor.labelColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              _currentUser?.role == 'admin'
-                  ? 'អ្នកគ្រប់គ្រង'
-                  : 'អ្នកប្រើប្រាស់',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingItem({
-    required String title,
-    required IconData leadingIcon,
-    required Color leadingIconColor,
-    VoidCallback? onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0),
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16.0,
-          vertical: 8.0,
-        ),
-        leading: Icon(leadingIcon, color: leadingIconColor, size: 24),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: AppColor.textColor,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        trailing: onTap != null
-            ? const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey)
-            : null,
-        onTap: onTap,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -683,32 +515,46 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: _buildProfileAvatar(),
+              child: ProfileAvatar(
+                profileImageFile: _profileImageFile,
+                profileImageUrl: _profileImageUrl,
+                firstNameController: _firstNameController,
+                lastNameController: _lastNameController,
+                emailController: _emailController,
+                onTap: _pickImage,
+                onImageError: () {
+                  setState(() {
+                    _profileImageUrl = null;
+                    _profileImageFile = null;
+                    _pickedWebImage = null;
+                  });
+                },
+              ),
             ),
             const SizedBox(height: 20),
 
-            _buildTextField(
+            CustomTextField(
               controller: _firstNameController,
               labelText: "ឈ្មោះដំបូង",
               keyboardType: TextInputType.name,
             ),
             const SizedBox(height: 15),
 
-            _buildTextField(
+            CustomTextField(
               controller: _lastNameController,
               labelText: "នាមត្រកូល",
               keyboardType: TextInputType.name,
             ),
             const SizedBox(height: 15),
 
-            _buildTextField(
+            CustomTextField(
               controller: _emailController,
               labelText: "អ៊ីមែល",
               readOnly: true,
             ),
             const SizedBox(height: 15),
 
-            _buildTextField(
+            CustomTextField(
               controller: _phoneController,
               labelText: "លេខទូរសព្ទ",
               keyboardType: TextInputType.phone,
@@ -747,19 +593,19 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 30),
 
-            _buildSettingItem(
+            SettingItem(
               title: "ប្ដូរអ៊ីមែល",
               leadingIcon: Icons.email_outlined,
               leadingIconColor: Colors.blue,
               onTap: _showChangeEmailDialog,
             ),
-            _buildSettingItem(
+            SettingItem(
               title: "ប្ដូរពាក្យសម្ងាត់",
               leadingIcon: Icons.lock_outline,
               leadingIconColor: Colors.orange,
               onTap: _showChangePasswordDialog,
             ),
-            _buildSettingItem(
+            SettingItem(
               title: "ការកក់របស់ខ្ញុំ",
               leadingIcon: Icons.book_online,
               leadingIconColor: Colors.purple,
@@ -768,7 +614,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Navigator.pushNamed(context, '/ordersScreen');
               },
             ),
-            _buildSettingItem(
+            SettingItem(
               title: "ចេញពីគណនី",
               leadingIcon: Icons.logout,
               leadingIconColor: Colors.red,
@@ -781,38 +627,39 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Helper method for consistent TextField styling
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    TextInputType keyboardType = TextInputType.text,
-    bool readOnly = false,
-    String? hintText,
-  }) {
-    return TextField(
-      controller: controller,
-      readOnly: readOnly,
-      decoration: InputDecoration(
-        labelText: labelText,
-        hintText: hintText,
-        labelStyle: TextStyle(color: AppColor.labelColor),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: AppColor.labelColor.withOpacity(0.5)),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: AppColor.primary, width: 2),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: AppColor.appBarColor,
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            "ប្រវត្តិរូប",
+            style: TextStyle(
+              color: AppColor.textColor,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColor.labelColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _currentUser?.role == 'admin'
+                  ? 'អ្នកគ្រប់គ្រង'
+                  : 'អ្នកប្រើប្រាស់',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
-      style: TextStyle(color: AppColor.textColor),
-      keyboardType: keyboardType,
     );
   }
 }

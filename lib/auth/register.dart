@@ -1,12 +1,11 @@
 import 'dart:convert';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:hotel_booking/models/user_model.dart'; // Make sure this path is correct
-import 'package:hotel_booking/auth/login.dart'; // Assuming your LoginPage path
-import 'package:hotel_booking/theme/color.dart'; // Assuming AppColor is defined here
+import 'package:hotel_booking/models/user_model.dart';
+import 'package:hotel_booking/auth/login.dart';
+import 'package:hotel_booking/theme/color.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -17,14 +16,13 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
-  bool _isLoading = false; // To show loading indicator on button
+  bool _isLoading = false;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
@@ -38,213 +36,135 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  /// Handles user registration, including Firebase Auth and backend API call.
   void _registerUser() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+    if (!_formKey.currentState!.validate()) return;
 
-      try {
-        // 1. Create user with Firebase Auth
-        UserCredential userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(
-              email: _emailController.text.trim(),
-              password: _passwordController.text.trim(),
-            );
+    setState(() => _isLoading = true);
 
-        final user = userCredential.user;
-        if (user == null) {
-          throw Exception("User creation failed in Firebase.");
-        }
-
-        // Get Firebase ID Token for backend API verification
-        String? idToken = await user.getIdToken();
-        if (idToken == null) {
-          throw Exception("Firebase ID Token not available.");
-        }
-
-        // 2. Prepare user profile data to send to your backend
-        final Map<String, dynamic> profileData = {
-          'id': user.uid,
-          'email': user.email,
-          'role': 'user', // Default role for new registrations
-          'canEdit': true, // Assuming new users can edit their profile
-          'canDelete':
-              false, // Assuming new users cannot delete their own account initially
-          'firstName': _firstNameController.text.trim(),
-          'lastName': _lastNameController.text.trim(),
-          'phone':
-              '', // Add a phone input field if you want to capture this at registration
-          'profileImage': '', // Or provide a default placeholder image URL
-        };
-
-        debugPrint(
-          'Sending profile data to backend: ${json.encode(profileData)}',
-        );
-
-        // 3. Call your backend API to create user profile in your database
-        final response = await http.post(
-          Uri.parse(
-            "https://flutter-hotel-booking-api-2.onrender.com/api/users/register",
-          ),
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization":
-                "Bearer $idToken", // Pass token for backend verification
-          },
-          body: json.encode(profileData),
-        );
-
-        final resBody = json.decode(response.body);
-        debugPrint(
-          'Backend registration response status: ${response.statusCode}',
-        );
-        debugPrint('Backend registration response body: $resBody');
-
-        if (response.statusCode == 201) {
-          // Assuming your backend's /api/users/register returns the full created user object
-          // For example: { "message": "User registered", "user": { ...full_user_data... } }
-          final Map<String, dynamic>? userDataFromBackend = resBody['user'];
-
-          UserModel newUserModel;
-          if (userDataFromBackend != null) {
-            newUserModel = UserModel.fromJson(userDataFromBackend);
-            debugPrint('Successfully parsed UserModel from backend response.');
-          } else {
-            // Fallback: If backend doesn't return the full user data, construct it from input fields
-            debugPrint(
-              'Warning: Backend did not return full user data on registration success. Constructing from input.',
-            );
-            newUserModel = UserModel(
-              id: user.uid,
-              email: user.email!,
-              role: 'user',
-              canEdit: true,
-              canDelete: false,
-              firstName: _firstNameController.text.trim(),
-              lastName: _lastNameController.text.trim(),
-              phone: '',
-              profileImage: '',
-            );
-          }
-
-          // 4. Save the complete UserModel to SharedPreferences
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user', json.encode(newUserModel.toJson()));
-          await prefs.setString(
-            'email',
-            newUserModel.email,
-          ); // Also save email separately for convenience
-          debugPrint(
-            'User profile and email saved to SharedPreferences after registration.',
+    try {
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
           );
 
-          // 5. Show success message and navigate
+      final user = userCredential.user;
+      if (user == null) throw Exception("User creation failed");
+
+      final idToken = await user.getIdToken();
+      if (idToken == null) throw Exception("No Firebase ID Token");
+
+      final profileData = {
+        'id': user.uid,
+        'email': user.email,
+        'role': 'user',
+        'canEdit': true,
+        'canDelete': false,
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
+        'phone': '',
+        'profileImage': '',
+      };
+
+      final response = await http.post(
+        Uri.parse(
+          "https://flutter-hotel-booking-api-2.onrender.com/api/users/register",
+        ),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $idToken",
+        },
+        body: json.encode(profileData),
+      );
+
+      final resBody = json.decode(response.body);
+
+      if (response.statusCode == 201) {
+        final userData = resBody['user'];
+        final newUser = userData != null
+            ? UserModel.fromJson(userData)
+            : UserModel(
+                id: user.uid,
+                email: user.email!,
+                role: 'user',
+                canEdit: true,
+                canDelete: false,
+                firstName: _firstNameController.text.trim(),
+                lastName: _lastNameController.text.trim(),
+                phone: '',
+                profileImage: '',
+              );
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user', json.encode(newUser.toJson()));
+        await prefs.setString('email', newUser.email);
+
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                "បានចុះឈ្មោះដោយជោគជ័យ! ឥឡូវនេះអ្នកអាចចូលបានហើយ។",
-              ), // Registered successfully! You can now log in.
+              content: Text("បានចុះឈ្មោះដោយជោគជ័យ!"),
               backgroundColor: Colors.green,
             ),
           );
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const LoginPage()),
+            MaterialPageRoute(builder: (_) => const LoginPage()),
           );
-        } else {
-          // Backend returned an error status code
+        }
+      } else {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                "ការចុះឈ្មោះបរាជ័យ: ${resBody['error'] ?? 'កំហុសមិនស្គាល់'}", // Registration failed: Unknown error
+                "ការចុះឈ្មោះបរាជ័យ: ${resBody['error'] ?? 'កំហុសមិនស្គាល់'}",
               ),
               backgroundColor: Colors.red,
             ),
           );
         }
-      } on FirebaseAuthException catch (e) {
-        String message = "ការចុះឈ្មោះបរាជ័យ។"; // Registration failed.
-        if (e.code == 'email-already-in-use') {
-          message =
-              "អ៊ីមែលនេះត្រូវបានប្រើប្រាស់រួចហើយ។"; // This email is already in use.
-        } else if (e.code == 'weak-password') {
-          message =
-              "ពាក្យសម្ងាត់ខ្សោយពេក។ សូមជ្រើសរើសពាក្យសម្ងាត់ដែលខ្លាំងជាងនេះ។"; // Password is too weak. Please choose a stronger one.
-        } else {
-          message = "កំហុស Firebase Auth: ${e.message}"; // Firebase Auth Error:
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
-        debugPrint('Firebase Auth Exception: $e');
-      } catch (e) {
-        // General errors (e.g., network issues, JSON decoding errors)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "មានកំហុសដែលមិនបានរំពឹងទុក: $e",
-            ), // An unexpected error occurred:
-            backgroundColor: Colors.red,
-          ),
-        );
-        debugPrint('General Error during registration: $e');
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
       }
+    } on FirebaseAuthException catch (e) {
+      var msg = "ការចុះឈ្មោះបរាជ័យ។";
+      if (e.code == 'email-already-in-use')
+        msg = "អ៊ីមែលនេះត្រូវបានប្រើរួចហើយ។";
+      if (e.code == 'weak-password') msg = "ពាក្យសម្ងាត់ខ្សោយពេក។";
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("មានកំហុស: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Helper to build consistent TextFormFields.
-  Widget _buildTextFormField({
+  Widget _buildTextField({
     required TextEditingController controller,
-    required String labelText,
-    required String hintText,
+    required String label,
+    required String hint,
     required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
+    TextInputType type = TextInputType.text,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType: keyboardType,
+      keyboardType: type,
       decoration: InputDecoration(
-        labelText: labelText,
-        hintText: hintText,
+        labelText: label,
+        hintText: hint,
         prefixIcon: Icon(icon, color: AppColor.labelColor),
         filled: true,
-        fillColor:
-            AppColor.appBarColor, // Use a lighter background for text fields
+        fillColor: AppColor.appBarColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none, // No border for a cleaner look
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: AppColor.primary,
-            width: 2,
-          ), // Highlight on focus
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        labelStyle: TextStyle(color: AppColor.labelColor),
-        hintStyle: TextStyle(color: AppColor.labelColor.withOpacity(0.7)),
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 15,
-          horizontal: 10,
         ),
       ),
       style: TextStyle(color: AppColor.textColor),
@@ -252,56 +172,33 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  /// Helper to build consistent password TextFormFields with visibility toggle.
-  Widget _buildPasswordFormField({
+  Widget _buildPasswordField({
     required TextEditingController controller,
-    required String labelText,
-    required String hintText,
-    required bool isVisible,
-    required VoidCallback toggleVisibility,
+    required String label,
+    required String hint,
+    required bool visible,
+    required VoidCallback toggle,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
-      obscureText: !isVisible,
+      obscureText: !visible,
       decoration: InputDecoration(
-        labelText: labelText,
-        hintText: hintText,
+        labelText: label,
+        hintText: hint,
         prefixIcon: Icon(Icons.lock_outline, color: AppColor.labelColor),
         suffixIcon: IconButton(
           icon: Icon(
-            isVisible ? Icons.visibility_off : Icons.visibility,
+            visible ? Icons.visibility_off : Icons.visibility,
             color: AppColor.labelColor,
           ),
-          onPressed: toggleVisibility,
+          onPressed: toggle,
         ),
         filled: true,
         fillColor: AppColor.appBarColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: AppColor.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        labelStyle: TextStyle(color: AppColor.labelColor),
-        hintStyle: TextStyle(color: AppColor.labelColor.withOpacity(0.7)),
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 15,
-          horizontal: 10,
         ),
       ),
       style: TextStyle(color: AppColor.textColor),
@@ -312,25 +209,25 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.appBgColor, // Use your app's background color
+      backgroundColor: AppColor.appBgColor,
       appBar: AppBar(
         backgroundColor: AppColor.appBarColor,
         elevation: 0,
         title: Text(
-          "ចុះឈ្មោះ", // Register
+          "ចុះឈ្មោះ",
           style: TextStyle(color: AppColor.textColor, fontSize: 18),
         ),
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(25.0),
+          padding: const EdgeInsets.all(25),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  "បង្កើតគណនីរបស់អ្នក", // Create Your Account
+                  "បង្កើតគណនីរបស់អ្នក",
                   style: TextStyle(
                     color: AppColor.textColor,
                     fontSize: 28,
@@ -339,138 +236,103 @@ class _RegisterPageState extends State<RegisterPage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 30),
-
-                _buildTextFormField(
+                _buildTextField(
                   controller: _firstNameController,
-                  labelText: "នាមខ្លួន", // First Name
-                  hintText: "បញ្ចូលនាមខ្លួនរបស់អ្នក", // Enter your first name
+                  label: "នាមខ្លួន",
+                  hint: "បញ្ចូលនាមខ្លួន",
                   icon: Icons.person_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'សូមបញ្ចូលនាមខ្លួនរបស់អ្នក'; // Please enter your first name
-                    }
-                    return null;
-                  },
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'សូមបញ្ចូលនាមខ្លួន' : null,
                 ),
                 const SizedBox(height: 20),
-
-                _buildTextFormField(
+                _buildTextField(
                   controller: _lastNameController,
-                  labelText: "នាមត្រកូល", // Last Name
-                  hintText: "បញ្ចូលនាមត្រកូលរបស់អ្នក", // Enter your last name
+                  label: "នាមត្រកូល",
+                  hint: "បញ្ចូលនាមត្រកូល",
                   icon: Icons.person_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'សូមបញ្ចូលនាមត្រកូលរបស់អ្នក'; // Please enter your last name
-                    }
-                    return null;
-                  },
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'សូមបញ្ចូលនាមត្រកូល' : null,
                 ),
                 const SizedBox(height: 20),
-
-                _buildTextFormField(
+                _buildTextField(
                   controller: _emailController,
-                  labelText: "អ៊ីមែល", // Email
-                  hintText: "បញ្ចូលអ៊ីមែលរបស់អ្នក", // Enter your email
+                  label: "អ៊ីមែល",
+                  hint: "បញ្ចូលអ៊ីមែល",
                   icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'សូមបញ្ចូលអ៊ីមែលរបស់អ្នក'; // Please enter your email
-                    }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                      return 'សូមបញ្ចូលអាសយដ្ឋានអ៊ីមែលត្រឹមត្រូវ'; // Please enter a valid email address
+                  type: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'សូមបញ្ចូលអ៊ីមែល';
+                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
+                      return 'អ៊ីមែលមិនត្រឹមត្រូវ';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
-
-                _buildPasswordFormField(
+                _buildPasswordField(
                   controller: _passwordController,
-                  labelText: "ពាក្យសម្ងាត់", // Password
-                  hintText: "បញ្ចូលពាក្យសម្ងាត់របស់អ្នក", // Enter your password
-                  isVisible: _isPasswordVisible,
-                  toggleVisibility: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'សូមបញ្ចូលពាក្យសម្ងាត់'; // Please enter a password
-                    }
-                    if (value.length < 6) {
-                      return 'ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងហោចណាស់ ៦ តួអក្សរ'; // Password must be at least 6 characters long
-                    }
+                  label: "ពាក្យសម្ងាត់",
+                  hint: "បញ្ចូលពាក្យសម្ងាត់",
+                  visible: _isPasswordVisible,
+                  toggle: () =>
+                      setState(() => _isPasswordVisible = !_isPasswordVisible),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'សូមបញ្ចូលពាក្យសម្ងាត់';
+                    if (v.length < 6) return 'ត្រូវតែមានយ៉ាងហោចណាស់ ៦ តួអក្សរ';
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
-
-                _buildPasswordFormField(
+                _buildPasswordField(
                   controller: _confirmPasswordController,
-                  labelText: "បញ្ជាក់ពាក្យសម្ងាត់", // Confirm Password
-                  hintText:
-                      "បញ្ចូលពាក្យសម្ងាត់របស់អ្នកម្តងទៀត", // Re-enter your password
-                  isVisible: _isConfirmPasswordVisible,
-                  toggleVisibility: () {
-                    setState(() {
-                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'សូមបញ្ជាក់ពាក្យសម្ងាត់របស់អ្នក'; // Please confirm your password
-                    }
-                    if (value != _passwordController.text) {
-                      return 'ពាក្យសម្ងាត់មិនត្រូវគ្នាទេ'; // Passwords do not match
-                    }
+                  label: "បញ្ជាក់ពាក្យសម្ងាត់",
+                  hint: "បញ្ចូលម្ដងទៀត",
+                  visible: _isConfirmPasswordVisible,
+                  toggle: () => setState(
+                    () =>
+                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'សូមបញ្ជាក់ពាក្យសម្ងាត់';
+                    if (v != _passwordController.text)
+                      return 'ពាក្យសម្ងាត់មិនត្រូវគ្នា';
                     return null;
                   },
                 ),
                 const SizedBox(height: 30),
-
                 ElevatedButton(
                   onPressed: _isLoading ? null : _registerUser,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColor.cyan, // Your cyan button color
+                    backgroundColor: AppColor.cyan,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    elevation: 5, // Added elevation
-                    shadowColor: AppColor.cyan.withOpacity(
-                      0.4,
-                    ), // Subtle shadow
                   ),
                   child: _isLoading
                       ? const SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
-                            color: Colors
-                                .white, // Changed to white for better contrast on primary button
+                            color: Colors.white,
                             strokeWidth: 2,
                           ),
                         )
-                      : Text(
-                          "ចុះឈ្មោះ", // Register
+                      : const Text(
+                          "ចុះឈ្មោះ",
                           style: TextStyle(
-                            color: Colors
-                                .white, // Changed to white for better contrast
+                            color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                 ),
                 const SizedBox(height: 20),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "មានគណនីរួចហើយ?", // Already have an account?
+                      "មានគណនីរួចហើយ?",
                       style: TextStyle(
                         color: AppColor.labelColor,
                         fontSize: 15,
@@ -480,24 +342,19 @@ class _RegisterPageState extends State<RegisterPage> {
                       onPressed: () {
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                          (Route<dynamic> route) => false,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                          (route) => false,
                         );
                       },
                       child: Text(
-                        "ចូល", // Login
+                        "ចូល",
                         style: TextStyle(
-                          color: AppColor
-                              .cyan, // Consistent primary color for links
+                          color: AppColor.cyan,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    // Removed "Continue to page" as it's confusing after registration
-                    // and typically a user would log in after registering.
                   ],
                 ),
               ],

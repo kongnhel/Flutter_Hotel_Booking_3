@@ -7,7 +7,7 @@ class Room {
   final String rate;
   final String location;
   final bool isFavorited;
-  final bool isBooked; // ✅ បន្ថែម field នេះ
+  final bool isBooked;
   final List<String> albumImages;
   final String description;
 
@@ -20,7 +20,7 @@ class Room {
     required this.rate,
     required this.location,
     required this.isFavorited,
-    required this.isBooked, // ✅ បន្ថែមនៅ constructor
+    required this.isBooked,
     required this.albumImages,
     required this.description,
   });
@@ -35,8 +35,7 @@ class Room {
       rate: json['rate']?.toString() ?? '',
       location: json['location'] ?? '',
       isFavorited: json['is_favorited'] ?? false,
-      isBooked: json['isBooked'] ?? false, // ✅ ទទួលពី API
-
+      isBooked: json['isBooked'] ?? false,
       albumImages: json['album_images'] != null
           ? List<String>.from(json['album_images'])
           : <String>[],
@@ -54,9 +53,37 @@ class Room {
       'rate': rate,
       'location': location,
       'is_favorited': isFavorited,
-      'isBooked': isBooked, // ✅ បញ្ចូលក្នុង JSON
+      'isBooked': isBooked,
       'album_images': albumImages,
       'description': description,
     };
+  }
+
+  Room copyWith({
+    String? id,
+    String? name,
+    String? image,
+    String? price,
+    String? roomTypeId,
+    String? rate,
+    String? location,
+    bool? isFavorited,
+    bool? isBooked,
+    List<String>? albumImages,
+    String? description,
+  }) {
+    return Room(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      image: image ?? this.image,
+      price: price ?? this.price,
+      roomTypeId: roomTypeId ?? this.roomTypeId,
+      rate: rate ?? this.rate,
+      location: location ?? this.location,
+      isFavorited: isFavorited ?? this.isFavorited,
+      isBooked: isBooked ?? this.isBooked,
+      albumImages: albumImages ?? this.albumImages,
+      description: description ?? this.description,
+    );
   }
 }
